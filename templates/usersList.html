@@ -1,0 +1,17 @@
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Name</th>
+  </tr>
+  {{#users}}
+  <tr>
+    <td>{{id}}</td>
+    <td>{{name}}</td>
+  </tr>
+  {{/users}}
+  {{^users}}
+  <tr>
+    <td colspan="2">No users found</td>
+  </tr>
+  {{/users}}
+</table>

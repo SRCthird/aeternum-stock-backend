@@ -1,0 +1,7 @@
+compile_commands.json
+dependencies.txt
+.cache/
+.env
+*.o
+CrowsNest
+sqlite3.db
