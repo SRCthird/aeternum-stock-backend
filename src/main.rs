@@ -1,30 +1,14 @@
+pub mod database;
+pub mod inventory;
+
 use axum::{response::IntoResponse, routing::get, Router, Server};
-use diesel::{
-    mysql::MysqlConnection,
-    r2d2::{ConnectionManager, Pool},
+use database::{
+    DbPool,
+    get_connection_pool
 };
-use dotenvy::dotenv;
-use std::env;
-
-mod models;
-mod schema;
-
-type DbPool = Pool<ConnectionManager<MysqlConnection>>;
-
-pub fn get_connection_pool() -> DbPool {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-    let manager = ConnectionManager::<MysqlConnection>::new(database_url);
-
-    return Pool::builder()
-        .test_on_check_out(true)
-        .build(manager)
-        .expect("Could not build connection pool");
-}
 
 async fn index(axum::Extension(pool): axum::Extension<DbPool>) -> impl IntoResponse {
+    let _conn = pool.get().expect("could not get db connection from pool");
     return "Hello, World!".to_string();
 }
 
