@@ -1,28 +1,26 @@
-pub mod database;
-pub mod inventory;
+#[macro_use]
+extern crate rocket;
 
-use axum::{response::IntoResponse, routing::get, Router, Server};
-use database::{
-    DbPool,
-    get_connection_pool
-};
+use rocket::{Build, Rocket};
 
-async fn index(axum::Extension(pool): axum::Extension<DbPool>) -> impl IntoResponse {
-    let _conn = pool.get().expect("could not get db connection from pool");
-    return "Hello, World!".to_string();
+mod database;
+mod controller;
+use controller::user;
+
+#[launch]
+fn rocket() -> Rocket<Build> {
+    rocket::build()
+        .configure(rocket::Config {
+            address: "0.0.0.0".parse().unwrap(),
+            port: 5000,
+            ..Default::default()
+        })
+        .mount("/", routes![
+            user::get,
+            user::input,
+            user::get_one,
+            user::update,
+            user::delete
+        ])
 }
 
-#[tokio::main]
-async fn main() {
-    let pool = get_connection_pool();
-
-    let app = Router::new()
-        .route("/", get(index))
-        .layer(axum::Extension(pool));
-
-    println!("Running on http://localhost:3000");
-    Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
