@@ -4,7 +4,6 @@ use rocket::{
     http::Status,
     response::status,
 };
-
 use crate::database::{
     self,
     models::user::{User, CreateUser, UpdateUser},
@@ -12,23 +11,33 @@ use crate::database::{
 };
 
 #[post("/", data = "<_user>")]
-pub fn input(_user: Json<CreateUser>) -> Json<User> {
+pub fn input(_user: Json<CreateUser>) -> Result<Json<User>, status::Custom<String>> {
     use crate::database::schema::user;
-
     let connection = &mut database::establish_connection();
-    diesel::insert_into(user::table)
+    
+    let result = diesel::insert_into(user::table)
         .values(_user.into_inner())
-        .execute(connection)
-        .expect("Error adding sighting");
+        .execute(connection);
 
-    Json(user::table
-        .order(user::id.desc())
-        .first(connection).unwrap()
-    )
+    match result {
+        Ok(_) => {
+            let inserted_user = dsl::user
+                .order(dsl::id.desc())
+                .first::<User>(connection)
+                .expect("Error getting inserted user");
+            Ok(Json(inserted_user))
+        },
+        Err(e) => Err(
+            match e {
+                diesel::result::Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _) => status::Custom(Status::Conflict, "User already exists".to_string()),
+                _ => status::Custom(Status::InternalServerError, "Error inserting user".to_string()),
+            }
+        ),
+    }
 }
 
 #[get("/?<email>")]
-pub fn get(email: Option<String>) -> Json<Vec<User>> {
+pub fn get(email: Option<String>) -> Result<Json<Vec<User>>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
     let query_result: QueryResult<Vec<User>> = match email {
@@ -38,7 +47,10 @@ pub fn get(email: Option<String>) -> Json<Vec<User>> {
         None => dsl::user.load(connection)
     };
 
-    query_result.map(Json).expect("Error loading users")
+    match query_result {
+        Ok(users) => Ok(Json(users)),
+        Err(_) => Err(status::Custom(Status::InternalServerError, "Error getting users".to_string())),
+    }
 }
 
 #[get("/<id>")]
@@ -88,6 +100,11 @@ pub fn delete(id: i32) -> Result<Json<User>, status::Custom<String>> {
                 .execute(connection).expect("Error deleting sighting");
             Ok(Json(found_user))
         },
-        Err(_) => Err(status::Custom(Status::NotFound, "User not found".to_string())),
+        Err(e) => Err(
+            match e {
+                diesel::result::Error::NotFound => status::Custom(Status::NotFound, "User not found".to_string()),
+                _ => status::Custom(Status::InternalServerError, "Error deleting user".to_string()),
+            }
+        )
     }
 }
