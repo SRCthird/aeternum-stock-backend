@@ -8,39 +8,65 @@ use rocket::{
 use crate::database::{
     self,
     models::warehouse::{Warehouse, CreateWarehouse, UpdateWarehouse},
-    schema::warehouse::dsl::*,
+    schema::warehouse::dsl,
 };
 
-#[post("/", data = "<_warehouse>")]
-pub fn input(_warehouse: Json<CreateWarehouse>) -> Json<Warehouse> {
+#[post("/", data = "<warehouse>")]
+pub fn input(warehouse: Json<CreateWarehouse>) -> Result<Json<Warehouse>, status::Custom<String>> {
     use crate::database::schema::warehouse;
 
     let connection = &mut database::establish_connection();
-    diesel::insert_into(warehouse::table)
-        .values(_warehouse.into_inner())
-        .execute(connection)
-        .expect("Error adding sighting");
+    let result = diesel::insert_into(warehouse::table)
+        .values(warehouse.into_inner())
+        .execute(connection);
 
-    Json(warehouse::table
-        .order(warehouse::id.desc())
-        .first(connection).unwrap()
-    )
+    match result {
+        Ok(_) => {
+            let inserted_warehouse = warehouse::table
+                .order(dsl::id.desc())
+                .first(connection).unwrap();
+            Ok(Json(inserted_warehouse))
+        },
+        Err(_) => Err(status::Custom(Status::InternalServerError, "Error inserting warehouse".to_string())),
+    }
 }
 
-#[get("/")]
-pub fn get() -> Json<Vec<Warehouse>> {
+#[get("/list")]
+pub fn list() -> Result<Json<Vec<String>>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
-    warehouse.load::<Warehouse>(connection)
-        .map(Json)
-        .expect("Error loading birds")
+
+    let result = dsl::warehouse
+        .select(dsl::name)
+        .load::<String>(connection);
+
+    match result {
+        Ok(warehouses) => Ok(Json(warehouses)),
+        Err(_) => Err(status::Custom(Status::InternalServerError, "Error loading warehouses".to_string())),
+    } 
 }
 
-#[get("/<_id>")]
-pub fn get_one(_id: i32) -> Result<Json<Warehouse>, status::Custom<String>> {
+#[get("/?<name>")]
+pub fn get(name: Option<String>) -> Result<Json<Vec<Warehouse>>, status::Custom<String>> {
+    let connection = &mut database::establish_connection();
+    let query_result: QueryResult<Vec<Warehouse>> = match name {
+        Some(name) => {
+            dsl::warehouse.filter(dsl::name.like(format!("{}%", name))).load(connection)
+        }
+        None => dsl::warehouse.load(connection)
+    };
+
+    match query_result {
+        Ok(warehouses) => Ok(Json(warehouses)),
+        Err(_) => Err(status::Custom(Status::InternalServerError, "Error getting warehouses".to_string()))
+    }
+}
+
+#[get("/<id>")]
+pub fn get_one(id: i32) -> Result<Json<Warehouse>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
-    let result = warehouse
-         .filter(id.eq(_id))
+    let result = dsl::warehouse
+         .filter(dsl::id.eq(id))
          .first::<Warehouse>(connection);
 
     match result {
@@ -49,17 +75,17 @@ pub fn get_one(_id: i32) -> Result<Json<Warehouse>, status::Custom<String>> {
     }
 }
 
-#[patch("/<_id>", data = "<patch_warehouse>")]
-pub fn update(_id: i32, patch_warehouse: Json<UpdateWarehouse>) -> Result<Json<Warehouse>, status::Custom<String>> {
+#[patch("/<id>", data = "<patch_warehouse>")]
+pub fn update(id: i32, patch_warehouse: Json<UpdateWarehouse>) -> Result<Json<Warehouse>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
     
-    let update_result = diesel::update(warehouse.filter(id.eq(_id)))
+    let update_result = diesel::update(dsl::warehouse.filter(dsl::id.eq(id)))
         .set(&patch_warehouse.into_inner())
         .execute(connection);
 
     match update_result {
         Ok(_) => {
-            match warehouse.filter(id.eq(_id)).first::<Warehouse>(connection) {
+            match dsl::warehouse.filter(dsl::id.eq(id)).first::<Warehouse>(connection) {
                 Ok(updated_warehouse) => Ok(Json(updated_warehouse)),
                 Err(_) => Err(status::Custom(Status::NotFound, "Warehouse not found after update".to_string())),
             }
@@ -68,17 +94,17 @@ pub fn update(_id: i32, patch_warehouse: Json<UpdateWarehouse>) -> Result<Json<W
     }
 }
 
-#[delete("/<_id>")]
-pub fn delete(_id: i32) -> Result<Json<Warehouse>, status::Custom<String>> {
+#[delete("/<id>")]
+pub fn delete(id: i32) -> Result<Json<Warehouse>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
-    let result = warehouse
-         .filter(id.eq(_id))
+    let result = dsl::warehouse
+         .filter(dsl::id.eq(id))
          .first::<Warehouse>(connection);
 
     match result {
         Ok(found_warehouse) => {
-            diesel::delete(warehouse.filter(id.eq(_id)))
+            diesel::delete(dsl::warehouse.filter(dsl::id.eq(id)))
                 .execute(connection).expect("Error deleting sighting");
             Ok(Json(found_warehouse))
         },
