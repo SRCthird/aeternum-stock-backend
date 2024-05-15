@@ -1,8 +1,9 @@
 use diesel::prelude::*;
+use rocket::serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 
-#[derive(Queryable, Debug, AsChangeset)]
-#[diesel(table_name = crate::database::schema::inventory)]
+#[derive(Serialize, Queryable)]
+#[serde(crate = "rocket::serde")]
 pub struct Inventory {
     pub id: i32,
     pub lot_number: String,
@@ -132,7 +133,8 @@ pub struct UpdateProductLot {
     pub quantity: Option<i32>,
 }
 
-#[derive(Queryable)]
+#[derive(Serialize, Queryable)]
+#[serde(crate = "rocket::serde")]
 pub struct User {
     pub id: i32,
     pub email: String,
@@ -147,7 +149,9 @@ pub struct User {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable)]
+#[derive(Insertable, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::database::schema::user)]
 pub struct CreateUser {
     pub email: String,
     pub password: String,
@@ -159,7 +163,9 @@ pub struct CreateUser {
     pub image: Option<String>,
 }
 
-#[derive(Queryable)]
+#[derive(Deserialize, AsChangeset, Debug)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::database::schema::user)]
 pub struct UpdateUser {
     pub email: Option<String>,
     pub password: Option<String>,
