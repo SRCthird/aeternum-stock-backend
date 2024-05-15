@@ -42,7 +42,7 @@ pub fn get(email: Option<String>) -> Result<Json<Vec<User>>, status::Custom<Stri
 
     let query_result: QueryResult<Vec<User>> = match email {
         Some(email) => {
-            dsl::user.filter(dsl::email.eq(email)).load(connection)
+            dsl::user.filter(dsl::email.like(format!("{}%", email))).load(connection)
         }
         None => dsl::user.load(connection)
     };
