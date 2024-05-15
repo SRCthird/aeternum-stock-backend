@@ -15,9 +15,9 @@ fn rocket() -> Rocket<Build> {
             port: 5000,
             ..Default::default()
         })
-        .mount("/", routes![
-            user::get,
+        .mount("/api/user/", routes![
             user::input,
+            user::get,
             user::get_one,
             user::update,
             user::delete
