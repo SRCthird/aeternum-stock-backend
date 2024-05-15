@@ -26,6 +26,7 @@ fn rocket() -> Rocket<Build> {
         ])
         .mount("/api/warehouse/", routes![
             warehouse::input,
+            warehouse::list,
             warehouse::get,
             warehouse::get_one,
             warehouse::update,
