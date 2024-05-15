@@ -8,7 +8,7 @@ use rocket::{
 use crate::database::{
     self,
     models::user::{User, CreateUser, UpdateUser},
-    schema::user::dsl::*,
+    schema::user::dsl,
 };
 
 #[post("/", data = "<_user>")]
@@ -27,20 +27,26 @@ pub fn input(_user: Json<CreateUser>) -> Json<User> {
     )
 }
 
-#[get("/")]
-pub fn get() -> Json<Vec<User>> {
+#[get("/?<email>")]
+pub fn get(email: Option<String>) -> Json<Vec<User>> {
     let connection = &mut database::establish_connection();
-    user.load::<User>(connection)
-        .map(Json)
-        .expect("Error loading birds")
+
+    let query_result: QueryResult<Vec<User>> = match email {
+        Some(email) => {
+            dsl::user.filter(dsl::email.eq(email)).load(connection)
+        }
+        None => dsl::user.load(connection)
+    };
+
+    query_result.map(Json).expect("Error loading users")
 }
 
-#[get("/<_id>")]
-pub fn get_one(_id: i32) -> Result<Json<User>, status::Custom<String>> {
+#[get("/<id>")]
+pub fn get_one(id: i32) -> Result<Json<User>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
-    let result = user
-         .filter(id.eq(_id))
+    let result = dsl::user
+         .filter(dsl::id.eq(id))
          .first::<User>(connection);
 
     match result {
@@ -49,17 +55,17 @@ pub fn get_one(_id: i32) -> Result<Json<User>, status::Custom<String>> {
     }
 }
 
-#[patch("/<_id>", data = "<patch_user>")]
-pub fn update(_id: i32, patch_user: Json<UpdateUser>) -> Result<Json<User>, status::Custom<String>> {
+#[patch("/<id>", data = "<patch_user>")]
+pub fn update(id: i32, patch_user: Json<UpdateUser>) -> Result<Json<User>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
     
-    let update_result = diesel::update(user.filter(id.eq(_id)))
+    let update_result = diesel::update(dsl::user.filter(dsl::id.eq(id)))
         .set(&patch_user.into_inner())
         .execute(connection);
 
     match update_result {
         Ok(_) => {
-            match user.filter(id.eq(_id)).first::<User>(connection) {
+            match dsl::user.filter(dsl::id.eq(id)).first::<User>(connection) {
                 Ok(updated_user) => Ok(Json(updated_user)),
                 Err(_) => Err(status::Custom(Status::NotFound, "User not found after update".to_string())),
             }
@@ -68,17 +74,17 @@ pub fn update(_id: i32, patch_user: Json<UpdateUser>) -> Result<Json<User>, stat
     }
 }
 
-#[delete("/<_id>")]
-pub fn delete(_id: i32) -> Result<Json<User>, status::Custom<String>> {
+#[delete("/<id>")]
+pub fn delete(id: i32) -> Result<Json<User>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
-    let result = user
-         .filter(id.eq(_id))
+    let result = dsl::user
+         .filter(dsl::id.eq(id))
          .first::<User>(connection);
 
     match result {
         Ok(found_user) => {
-            diesel::delete(user.filter(id.eq(_id)))
+            diesel::delete(dsl::user.filter(dsl::id.eq(id)))
                 .execute(connection).expect("Error deleting sighting");
             Ok(Json(found_user))
         },
