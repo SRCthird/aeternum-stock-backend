@@ -1,25 +1,15 @@
-pub mod models;
 pub mod schema;
-pub mod error;
-
-use diesel::{
-    mysql::MysqlConnection,
-    r2d2::{ConnectionManager, Pool},
-};
-use dotenvy::dotenv;
+pub mod models;
 use std::env;
 
-pub type DbPool = Pool<ConnectionManager<MysqlConnection>>;
+use diesel::prelude::*;
+use dotenvy::dotenv;
 
-pub fn get_connection_pool() -> DbPool {
+pub fn establish_connection() -> MysqlConnection {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    let manager = ConnectionManager::<MysqlConnection>::new(database_url);
-
-    return Pool::builder()
-        .test_on_check_out(true)
-        .build(manager)
-        .expect("Could not build connection pool");
+    MysqlConnection::establish(&database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
 }
