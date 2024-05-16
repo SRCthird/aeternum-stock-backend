@@ -14,6 +14,10 @@ diesel::table! {
         updated_at -> Nullable<Datetime>,
         #[max_length = 191]
         updated_by -> Nullable<Varchar>,
+        #[max_length = 191]
+        from_location -> Varchar,
+        #[max_length = 191]
+        comments -> Varchar,
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::database::{
     self, 
-    models::{inventory::{Inventory, RequestCreateInventory}, log::CreateLog},
+    models::{inventory::{Inventory, CreateInventory}, log::CreateLog},
 };
 use crate::database::schema::{
     inventory::dsl,
@@ -11,7 +11,7 @@ use rocket::{http::Status, response::status};
 use diesel::result::Error::NotFound;
 
 pub fn merge_lot_from_create(
-    inventory: RequestCreateInventory,
+    inventory: CreateInventory,
 ) -> Result<Inventory, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
@@ -45,7 +45,7 @@ pub fn merge_lot_from_create(
         user: inventory.created_by.clone(),
         lot_number: inventory.lot_number.clone(),
         quantity_moved: inventory.quantity,
-        comments: inventory.comment.clone(),
+        comments: inventory.comments.clone(),
     };
     diesel::insert_into(log::dsl::log)
         .values(log)

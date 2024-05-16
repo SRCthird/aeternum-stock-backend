@@ -2,7 +2,7 @@ use crate::controller::inventory::utils::merge_lot_from_create;
 use crate::database::{
     self,
     models::{
-        inventory::{CreateInventory, Inventory, RequestCreateInventory},
+        inventory::{CreateInventory, Inventory},
         productlot::ProductLot,
     },
     schema::{
@@ -23,16 +23,9 @@ use diesel::{
 use rocket::{http::Status, response::status, serde::json::Json};
 #[post("/", data = "<inventory>")]
 pub fn input(
-    inventory: Json<RequestCreateInventory>,
+    inventory: Json<CreateInventory>,
 ) -> Result<Json<Inventory>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
-    let create_inventory = CreateInventory {
-        lot_number: inventory.lot_number.clone(),
-        location: inventory.location.clone(),
-        quantity: inventory.quantity,
-        created_by: inventory.created_by.clone(),
-        created_at: Some(chrono::Local::now().naive_utc()),
-    };
 
     let lot = productlot::dsl::productlot
         .filter(productlot::dsl::lot_number.eq(&inventory.lot_number))
@@ -110,12 +103,13 @@ pub fn input(
     }
 
     let result = diesel::insert_into(table)
-        .values(create_inventory)
+        .values(inventory.clone().into_inner())
         .execute(connection);
 
     match result {
         Ok(_) => {
-            let inserted_inventory = table.order(dsl::id.desc()).first(connection).unwrap();
+            let inserted_inventory = table.order(dsl::id.desc())
+                .first(connection).unwrap();
             diesel::insert_into(log::dsl::log)
                 .values((
                     log::dsl::from_location.eq(&inventory.from_location),
@@ -123,7 +117,7 @@ pub fn input(
                     log::dsl::user.eq(&inventory.created_by),
                     log::dsl::lot_number.eq(&inventory.lot_number),
                     log::dsl::quantity_moved.eq(&inventory.quantity),
-                    log::dsl::comments.eq(&inventory.comment),
+                    log::dsl::comments.eq(&inventory.comments),
                 ))
                 .execute(connection)
                 .map_err(|e| {

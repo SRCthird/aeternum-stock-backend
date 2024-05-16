@@ -13,6 +13,8 @@ pub struct Inventory {
     pub created_by: String,
     pub updated_at: Option<NaiveDateTime>,
     pub updated_by: Option<String>,
+    pub from_location: String,
+    pub comments: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -24,11 +26,11 @@ pub struct RequestCreateInventory {
     pub created_by: String,
 
     pub from_location: String,
-    pub comment: String,
+    pub comments: String,
 }
 
 
-#[derive(Debug, Insertable, Deserialize)]
+#[derive(Debug, Insertable, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::database::schema::inventory)]
 pub struct CreateInventory {
@@ -37,6 +39,8 @@ pub struct CreateInventory {
     pub quantity: i32,
     pub created_by: String,
     pub created_at: Option<NaiveDateTime>,
+    pub from_location: String,
+    pub comments: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -49,7 +53,7 @@ pub struct RequestUpdateInventory {
     pub updated_at: NaiveDateTime,
 
     pub from_location: Option<String>,
-    pub comment: Option<String>,
+    pub comments: Option<String>,
 }
 
 #[derive(Deserialize, AsChangeset, Debug)]
@@ -61,4 +65,6 @@ pub struct UpdateInventory {
     pub quantity: Option<i32>,
     pub updated_by: String,
     pub updated_at: NaiveDateTime,
+    pub from_location: Option<String>,
+    pub comments: Option<String>,
 }
