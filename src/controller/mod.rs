@@ -5,4 +5,4 @@ pub mod inventory;
 pub mod product;
 pub mod productlot;
 pub mod log;
-
+pub mod utils;
