@@ -56,6 +56,7 @@ fn rocket() -> Rocket<Build> {
         .mount("/api/product-lot/", routes![
             productlot::input,
             productlot::get,
+            productlot::list,
             productlot::get_one,
             productlot::update,
             productlot::delete
