@@ -1,87 +1,180 @@
-use diesel::prelude::*;
-use rocket::{
-    serde::json::Json,
-    http::Status,
-    response::status,
-};
-
 use crate::database::{
     self,
-    models::product::{Product, CreateProduct, UpdateProduct},
-    schema::product::dsl::*,
+    models::product::{CreateProduct, UpdateProduct, Product},
+    schema::product::{dsl, table},
 };
+use diesel::{prelude::*, result::{
+    Error::{DatabaseError, NotFound},
+    DatabaseErrorKind::{UniqueViolation, ForeignKeyViolation},
+}};
+use crate::controller::utils;
+use rocket::{http::Status, response::status, serde::json::Json};
 
-#[post("/", data = "<_product>")]
-pub fn input(_product: Json<CreateProduct>) -> Json<Product> {
-    use crate::database::schema::product;
-
+#[post("/", data = "<product>")]
+pub fn input(product: Json<CreateProduct>) -> Result<Json<Product>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
-    diesel::insert_into(product::table)
-        .values(_product.into_inner())
-        .execute(connection)
-        .expect("Error adding sighting");
-
-    Json(product::table
-        .order(product::id.desc())
-        .first(connection).unwrap()
-    )
-}
-
-#[get("/")]
-pub fn get() -> Json<Vec<Product>> {
-    let connection = &mut database::establish_connection();
-    product.load::<Product>(connection)
-        .map(Json)
-        .expect("Error loading birds")
-}
-
-#[get("/<_id>")]
-pub fn get_one(_id: i32) -> Result<Json<Product>, status::Custom<String>> {
-    let connection = &mut database::establish_connection();
-
-    let result = product
-         .filter(id.eq(_id))
-         .first::<Product>(connection);
+    let result = diesel::insert_into(table)
+        .values(product.into_inner())
+        .execute(connection);
 
     match result {
-        Ok(found_product) => Ok(Json(found_product)),
-        Err(_) => Err(status::Custom(Status::NotFound, "Product not found".to_string())),
+        Ok(_) => {
+            let inserted_product = table.order(dsl::id.desc()).first(connection).unwrap();
+            Ok(Json(inserted_product))
+        }
+        Err(e) => Err(match e {
+            NotFound => status::Custom(Status::NotFound, "Product not found".to_string()),
+            DatabaseError(UniqueViolation, _) => status::Custom(
+                Status::Conflict,
+                "Product already exists in system".to_string(),
+            ),
+            DatabaseError(ForeignKeyViolation, _) => status::Custom(
+                Status::Conflict,
+                "Product does not exist".to_string(),
+            ),
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error inserting product".to_string(),
+            ),
+        }),
     }
 }
 
-#[patch("/<_id>", data = "<patch_product>")]
-pub fn update(_id: i32, patch_product: Json<UpdateProduct>) -> Result<Json<Product>, status::Custom<String>> {
+#[get("/list")]
+pub fn list() -> Result<Json<Vec<String>>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
-    
-    let update_result = diesel::update(product.filter(id.eq(_id)))
+
+    let result = dsl::product.select(dsl::name).load::<String>(connection);
+
+    match result {
+        Ok(products) => Ok(Json(products)),
+        Err(_) => Err(status::Custom(
+            Status::InternalServerError,
+            "Error loading products".to_string(),
+        )),
+    }
+}
+
+#[get("/?<name>&<description>")]
+pub fn get(name: Option<String>, description: Option<String>) -> Result<Json<Vec<Product>>, status::Custom<String>> {
+    let connection = &mut database::establish_connection();
+    match utils::validate_string(&name)
+        && utils::validate_string(&description)
+    {
+        true => (),
+        false => return Err(status::Custom(Status::BadRequest, "Invalid character in search query".to_string())),
+    }
+
+    let query_result: QueryResult<Vec<Product>> = 
+        match (name, description) {
+            (Some(name), Some(description)) => dsl::product
+                .filter(dsl::name.like(format!("{}%", name)))
+                .filter(dsl::description.like(format!("{}%", description)))
+                .load(connection),
+            (Some(name), None) => dsl::product
+                .filter(dsl::name.like(format!("{}%", name)))
+                .load(connection),
+            (None, Some(description)) => dsl::product
+                .filter(dsl::description.like(format!("{}%", description)))
+                .load(connection),
+            (None, None) => dsl::product.load(connection),
+        };
+
+    match query_result {
+        Ok(products) => Ok(Json(products)),
+        Err(_) => Err(status::Custom(
+            Status::InternalServerError,
+            "Error getting products".to_string(),
+        )),
+    }
+}
+
+#[get("/<id>")]
+pub fn get_one(id: i32) -> Result<Json<Product>, status::Custom<String>> {
+    let connection = &mut database::establish_connection();
+
+    let result = dsl::product
+        .filter(dsl::id.eq(id))
+        .first::<Product>(connection);
+
+    match result {
+        Ok(found_product) => Ok(Json(found_product)),
+        Err(_) => Err(status::Custom(
+            Status::NotFound,
+            "Product not found".to_string(),
+        )),
+    }
+}
+
+#[patch("/<id>", data = "<patch_product>")]
+pub fn update(
+    id: i32,
+    patch_product: Json<UpdateProduct>,
+) -> Result<Json<Product>, status::Custom<String>> {
+    let connection = &mut database::establish_connection();
+    let found_product = dsl::product
+        .filter(dsl::id.eq(id))
+        .first::<Product>(connection)
+        .map_err(|e| match e {
+            NotFound => status::Custom(
+                Status::NotFound,
+                "Product not found in system".to_string(),
+            ),
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error loading product".to_string(),
+            ),
+        })?;
+
+    let update_result = diesel::update(dsl::product.filter(dsl::id.eq(id)))
         .set(&patch_product.into_inner())
         .execute(connection);
 
     match update_result {
-        Ok(_) => {
-            match product.filter(id.eq(_id)).first::<Product>(connection) {
-                Ok(updated_product) => Ok(Json(updated_product)),
-                Err(_) => Err(status::Custom(Status::NotFound, "Product not found after update".to_string())),
-            }
-        },
-        Err(_) => Err(status::Custom(Status::InternalServerError, "Error updating product".to_string())),
+        Ok(_) => Ok(Json(found_product)),
+        Err(e) => Err(match e {
+            NotFound => status::Custom(Status::NotFound, "Product not found".to_string()),
+            DatabaseError(UniqueViolation, _) => status::Custom(
+                Status::Conflict,
+                "Product already exists in system".to_string(),
+            ),
+            DatabaseError(ForeignKeyViolation, _) => status::Custom(
+                Status::Conflict,
+                "Product does not exist".to_string(),
+            ),
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error inserting product".to_string(),
+            ),
+        }),
     }
 }
 
-#[delete("/<_id>")]
-pub fn delete(_id: i32) -> Result<Json<Product>, status::Custom<String>> {
+#[delete("/<id>")]
+pub fn delete(id: i32) -> Result<Json<Product>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
-    let result = product
-         .filter(id.eq(_id))
-         .first::<Product>(connection);
+    let found_product = dsl::product
+        .filter(dsl::id.eq(id))
+        .first::<Product>(connection)
+        .map_err(|e| match e {
+            NotFound => status::Custom(
+                Status::NotFound,
+                "Product not found in system".to_string(),
+            ),
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error loading product".to_string(),
+            ),
+        })?;
+
+    let result = diesel::delete(dsl::product.filter(dsl::id.eq(id))).execute(connection);
 
     match result {
-        Ok(found_product) => {
-            diesel::delete(product.filter(id.eq(_id)))
-                .execute(connection).expect("Error deleting sighting");
-            Ok(Json(found_product))
-        },
-        Err(_) => Err(status::Custom(Status::NotFound, "Product not found".to_string())),
+        Ok(_) => Ok(Json(found_product)),
+        Err(_) => Err(status::Custom(
+            Status::NotFound,
+            "Product not found".to_string(),
+        )),
     }
 }
