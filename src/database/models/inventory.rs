@@ -17,19 +17,6 @@ pub struct Inventory {
     pub comments: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(crate = "rocket::serde")]
-pub struct RequestCreateInventory {
-    pub lot_number: String,
-    pub location: String,
-    pub quantity: i32,
-    pub created_by: String,
-
-    pub from_location: String,
-    pub comments: String,
-}
-
-
 #[derive(Debug, Insertable, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::database::schema::inventory)]
@@ -43,28 +30,15 @@ pub struct CreateInventory {
     pub comments: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-#[serde(crate = "rocket::serde")]
-pub struct RequestUpdateInventory {
-    pub lot_number: Option<String>,
-    pub location: Option<String>,
-    pub quantity: Option<i32>,
-    pub updated_by: String,
-    pub updated_at: NaiveDateTime,
-
-    pub from_location: Option<String>,
-    pub comments: Option<String>,
-}
-
-#[derive(Deserialize, AsChangeset, Debug)]
+#[derive(Deserialize, AsChangeset, Debug, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::database::schema::inventory)]
 pub struct UpdateInventory {
     pub lot_number: Option<String>,
     pub location: Option<String>,
     pub quantity: Option<i32>,
-    pub updated_by: String,
-    pub updated_at: NaiveDateTime,
+    pub updated_by: Option<String>,
+    pub updated_at: Option<NaiveDateTime>,
     pub from_location: Option<String>,
     pub comments: Option<String>,
 }

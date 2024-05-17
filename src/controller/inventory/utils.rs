@@ -1,16 +1,16 @@
+use crate::database::schema::{inventory::dsl, log};
 use crate::database::{
-    self, 
-    models::{inventory::{Inventory, CreateInventory}, log::CreateLog},
-};
-use crate::database::schema::{
-    inventory::dsl,
-    log
+    self,
+    models::{
+        inventory::{CreateInventory, Inventory},
+        log::CreateLog,
+    },
 };
 use diesel::prelude::*;
-use rocket::{http::Status, response::status};
 use diesel::result::Error::NotFound;
+use rocket::{http::Status, response::status};
 
-pub fn merge_lot_from_create(
+pub fn merge_lot(
     inventory: CreateInventory,
 ) -> Result<Inventory, status::Custom<String>> {
     let connection = &mut database::establish_connection();
@@ -20,10 +20,7 @@ pub fn merge_lot_from_create(
         .filter(dsl::location.eq(&inventory.location))
         .first::<Inventory>(connection)
         .map_err(|e| match e {
-            NotFound => status::Custom(
-                Status::NotFound,
-                "Inventory not found".to_string(),
-            ),
+            NotFound => status::Custom(Status::NotFound, "Inventory not found".to_string()),
             _ => status::Custom(
                 Status::InternalServerError,
                 format!("Error loading inventory: {:?}", e),
@@ -34,10 +31,12 @@ pub fn merge_lot_from_create(
         .filter(dsl::id.eq(mergable_lot.id))
         .set(dsl::quantity.eq(mergable_lot.quantity + inventory.quantity))
         .execute(connection)
-        .map_err(|e| status::Custom(
-            Status::InternalServerError,
-            format!("Error updating inventory: {:?}", e),
-        ))?;
+        .map_err(|e| {
+            status::Custom(
+                Status::InternalServerError,
+                format!("Error updating inventory: {:?}", e),
+            )
+        })?;
 
     let log = CreateLog {
         from_location: inventory.from_location.clone(),
@@ -50,19 +49,18 @@ pub fn merge_lot_from_create(
     diesel::insert_into(log::dsl::log)
         .values(log)
         .execute(connection)
-        .map_err(|e| status::Custom(
-            Status::InternalServerError,
-            format!("Error inserting log: {:?}", e),
-        ))?;
+        .map_err(|e| {
+            status::Custom(
+                Status::InternalServerError,
+                format!("Error inserting log: {:?}", e),
+            )
+        })?;
 
     let updated_inventory = dsl::inventory
         .filter(dsl::id.eq(mergable_lot.id))
         .first::<Inventory>(connection)
         .map_err(|e| match e {
-            NotFound => status::Custom(
-                Status::NotFound,
-                "Updated inventory not found".to_string(),
-            ),
+            NotFound => status::Custom(Status::NotFound, "Updated inventory not found".to_string()),
             _ => status::Custom(
                 Status::InternalServerError,
                 format!("Error loading updated inventory: {:?}", e),
@@ -71,4 +69,3 @@ pub fn merge_lot_from_create(
 
     Ok(updated_inventory)
 }
-

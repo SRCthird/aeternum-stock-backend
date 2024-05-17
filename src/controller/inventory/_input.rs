@@ -1,4 +1,4 @@
-use crate::controller::inventory::utils::merge_lot_from_create;
+use crate::controller::inventory::utils::merge_lot;
 use crate::database::{
     self,
     models::{
@@ -22,9 +22,7 @@ use diesel::{
 
 use rocket::{http::Status, response::status, serde::json::Json};
 #[post("/", data = "<inventory>")]
-pub fn input(
-    inventory: Json<CreateInventory>,
-) -> Result<Json<Inventory>, status::Custom<String>> {
+pub fn input(inventory: Json<CreateInventory>) -> Result<Json<Inventory>, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
     let lot = productlot::dsl::productlot
@@ -88,7 +86,7 @@ pub fn input(
         ));
     }
 
-    let merged = merge_lot_from_create(inventory.clone().into_inner());
+    let merged = merge_lot(inventory.clone().into_inner());
 
     match merged {
         Ok(lot) => return Ok(Json(lot)),
@@ -108,8 +106,7 @@ pub fn input(
 
     match result {
         Ok(_) => {
-            let inserted_inventory = table.order(dsl::id.desc())
-                .first(connection).unwrap();
+            let inserted_inventory = table.order(dsl::id.desc()).first(connection).unwrap();
             diesel::insert_into(log::dsl::log)
                 .values((
                     log::dsl::from_location.eq(&inventory.from_location),
