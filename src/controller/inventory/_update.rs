@@ -80,6 +80,7 @@ pub fn update(
         }
     }
 
+    /*
     match &patch_inventory.location {
         Some(location) => {
             dsl::inventory
@@ -88,7 +89,7 @@ pub fn update(
                 .map_err(|e| match e {
                     NotFound => status::Custom(
                         Status::NotFound,
-                        "Inventory not found in system".to_string(),
+                        "Inventory not found in this system".to_string(),
                     ),
                     _ => status::Custom(
                         Status::InternalServerError,
@@ -97,7 +98,7 @@ pub fn update(
                 })?;
         }
         None => {}
-    }
+    }*/
 
     let updated_inventory = CreateInventory {
         lot_number: patch_inventory
@@ -132,10 +133,20 @@ pub fn update(
             .unwrap_or(found_inventory.comments.clone()),
     };
 
-    let merged = merge_lot(updated_inventory.clone());
+    let merged = merge_lot(updated_inventory.clone(), Some(id));
 
     match merged {
-        Ok(lot) => return Ok(Json(lot)),
+        Ok(lot) => return {
+            diesel::delete(dsl::inventory.filter(dsl::id.eq(id)))
+                .execute(connection)
+                .map_err(|_| {
+                    status::Custom(
+                        Status::InternalServerError,
+                        "Error deleting inventory".to_string(),
+                    )
+                })?;
+            Ok(Json(lot))
+        },
         Err(e) => {
             if e.0 != Status::NotFound {
                 return Err(status::Custom(
@@ -150,6 +161,7 @@ pub fn update(
         .set(&patch_inventory.clone().into_inner())
         .execute(connection);
 
+    println!("{:?}", patch_inventory.clone().into_inner());
     match update_result {
         Ok(_) => {
             if let Some(from_location) = &patch_inventory.from_location {

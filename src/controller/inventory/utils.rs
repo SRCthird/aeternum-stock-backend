@@ -12,12 +12,14 @@ use rocket::{http::Status, response::status};
 
 pub fn merge_lot(
     inventory: CreateInventory,
+    inventory_id: Option<i32>,
 ) -> Result<Inventory, status::Custom<String>> {
     let connection = &mut database::establish_connection();
 
     let mergable_lot = dsl::inventory
         .filter(dsl::lot_number.eq(&inventory.lot_number))
         .filter(dsl::location.eq(&inventory.location))
+        .filter(dsl::id.ne(inventory_id.unwrap_or(0)))
         .first::<Inventory>(connection)
         .map_err(|e| match e {
             NotFound => status::Custom(Status::NotFound, "Inventory not found".to_string()),

@@ -47,7 +47,7 @@ pub fn input(inventory: Json<CreateInventory>) -> Result<Json<Inventory>, status
 
     if bay_max_count == 0 {
         return Err(status::Custom(
-            Status::NotFound,
+            Status::PayloadTooLarge,
             "Location not found in system, or not a storable location".to_string(),
         ));
     }
@@ -86,7 +86,7 @@ pub fn input(inventory: Json<CreateInventory>) -> Result<Json<Inventory>, status
         ));
     }
 
-    let merged = merge_lot(inventory.clone().into_inner());
+    let merged = merge_lot(inventory.clone().into_inner(), None);
 
     match merged {
         Ok(lot) => return Ok(Json(lot)),
