@@ -172,9 +172,19 @@ pub fn delete(id: i32) -> Result<Json<Product>, status::Custom<String>> {
 
     match result {
         Ok(_) => Ok(Json(found_product)),
-        Err(_) => Err(status::Custom(
-            Status::NotFound,
-            "Product not found".to_string(),
-        )),
+        Err(e) => Err(match e {
+            NotFound => status::Custom(
+                Status::NotFound,
+                "Product not found".to_string(),
+            ),
+            DatabaseError(ForeignKeyViolation, _) => status::Custom(
+                Status::Conflict,
+                "Product is in use".to_string(),
+            ),
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error deleting product".to_string(),
+            ),
+        }),
     }
 }
