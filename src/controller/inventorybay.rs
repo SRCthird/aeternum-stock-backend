@@ -42,6 +42,21 @@ pub fn input(inventorybay: Json<CreateInventoryBay>) -> Result<Json<InventoryBay
     }
 }
 
+#[get("/list")]
+pub fn list() -> Result<Json<Vec<String>>, status::Custom<String>> {
+    let connection = &mut database::establish_connection();
+
+    let result = dsl::inventorybay.select(dsl::name).load::<String>(connection);
+
+    match result {
+        Ok(bay) => Ok(Json(bay)),
+        Err(_) => Err(status::Custom(
+            Status::InternalServerError,
+            "Error loading bays".to_string(),
+        )),
+    }
+}
+
 #[get("/?<name>&<warehouse_name>&<max_unique_lots>")]
 pub fn get(
     name: Option<String>,

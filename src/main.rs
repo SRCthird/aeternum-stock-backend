@@ -42,6 +42,7 @@ fn rocket() -> Rocket<Build> {
             "/api/inventory-bay/",
             routes![
                 inventorybay::input,
+                inventorybay::list,
                 inventorybay::get,
                 inventorybay::get_one,
                 inventorybay::update,
