@@ -3,7 +3,7 @@ use crate::database::{
     models::user::{CreateUser, UpdateUser, User},
     schema::user::{dsl, table},
 };
-use diesel::{prelude::*, result::Error::NotFound};
+use diesel::{prelude::*, result::{DatabaseErrorKind::UniqueViolation, Error::{DatabaseError, NotFound}}};
 use rocket::{http::Status, response::status, serde::json::Json};
 
 #[post("/", data = "<user>")]
@@ -94,10 +94,15 @@ pub fn update(id: i32, patch_user: Json<UpdateUser>) -> Result<Json<User>, statu
 
     match update_result {
         Ok(_) => Ok(Json(found_user)),
-        Err(_) => Err(status::Custom(
-            Status::InternalServerError,
-            "Error updating user".to_string(),
-        )),
+        Err(e) => Err(match e {
+            DatabaseError(UniqueViolation, _) => {
+                status::Custom(Status::Conflict, "Email already in use".to_string())
+            },
+            _ => status::Custom(
+                Status::InternalServerError,
+                "Error updating user".to_string(),
+            ),
+        }),
     }
 }
 
