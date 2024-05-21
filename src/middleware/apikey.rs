@@ -1,5 +1,6 @@
 use rocket::{fairing::{Fairing, Info, Kind}, http::{uri::Origin, Status}, response::status, Data, Request};
 use std::env;
+use std::path::Path;
 use dotenvy::dotenv;
 
 pub struct ApiKeyFairing;
@@ -15,7 +16,7 @@ impl Fairing for ApiKeyFairing {
 
     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
         dotenv().ok();
-        let api_key = env::var("API_KEY").expect("API_KEY must be set");
+        let api_key = api_key();
         let recieved = request.headers().get_one("x-api-key");
         match recieved {
             Some(key) if key == api_key => {
@@ -27,6 +28,20 @@ impl Fairing for ApiKeyFairing {
             }
         }
     }
+}
+
+fn api_key() -> String {
+    if let Ok(exe_path) = env::current_exe() {
+        let dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
+        let dotenv_path = dir.join(".env");
+        if dotenvy::from_filename(dotenv_path.to_str().unwrap()).is_err() {
+            dotenv().ok();
+        }
+    } else {
+        dotenv().ok();
+    }
+
+    env::var("API_KEY").expect("API_KEY must be set")
 }
 
 #[post("/invalid_api_key")]
