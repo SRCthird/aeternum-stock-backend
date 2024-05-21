@@ -16,6 +16,12 @@ fn rocket() -> Rocket<Build> {
             port: 5000,
             ..Default::default()
         })
+        .register(
+            "/",
+            catchers![
+                middleware::catchers::not_found
+            ]
+        )
         .attach(middleware::apikey::ApiKeyFairing)
         .mount(
             "/api/user/",
@@ -94,7 +100,13 @@ fn rocket() -> Rocket<Build> {
         .mount(
             "/api/error/", 
             routes![
-                middleware::apikey::invalid_api_key
+                middleware::apikey::get_invalid_api_key,
+                middleware::apikey::post_invalid_api_key,
+                middleware::apikey::put_invalid_api_key,
+                middleware::apikey::delete_invalid_api_key,
+                middleware::apikey::patch_invalid_api_key,
+                middleware::apikey::head_invalid_api_key,
+                middleware::apikey::options_invalid_api_key
             ]
         )
 }
