@@ -29,8 +29,32 @@ impl Fairing for ApiKeyFairing {
     }
 }
 
+#[post("/invalid_api_key")]
+pub fn post_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
 #[get("/invalid_api_key")]
-pub fn invalid_api_key() -> status::Custom<String> {
+pub fn get_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
+#[put("/invalid_api_key")]
+pub fn put_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
+#[delete("/invalid_api_key")]
+pub fn delete_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
+#[patch("/invalid_api_key")]
+pub fn patch_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
+#[head("/invalid_api_key")]
+pub fn head_invalid_api_key() -> status::Custom<String> {
+    status::Custom(Status::Unauthorized, "Invalid API key".to_string())
+}
+#[options("/invalid_api_key")]
+pub fn options_invalid_api_key() -> status::Custom<String> {
     status::Custom(Status::Unauthorized, "Invalid API key".to_string())
 }
 
