@@ -6,6 +6,7 @@ use rocket::{config::{Ident, LogLevel}, Build, Rocket};
 mod controller;
 mod database;
 mod middleware;
+mod catcher;
 use controller::{inventory, inventorybay, log, product, productlot, user, warehouse};
 
 #[launch]
@@ -22,10 +23,22 @@ fn rocket() -> Rocket<Build> {
         .register(
             "/",
             catchers![
-                middleware::catchers::not_found
+                catcher::not_found
             ]
         )
         .attach(middleware::apikey::ApiKeyFairing)
+        .mount(
+            "/api/error/", 
+            routes![
+                middleware::apikey::get_invalid_api_key,
+                middleware::apikey::post_invalid_api_key,
+                middleware::apikey::put_invalid_api_key,
+                middleware::apikey::delete_invalid_api_key,
+                middleware::apikey::patch_invalid_api_key,
+                middleware::apikey::head_invalid_api_key,
+                middleware::apikey::options_invalid_api_key
+            ]
+        )
         .mount(
             "/api/user/",
             routes![
@@ -99,17 +112,5 @@ fn rocket() -> Rocket<Build> {
                 log::update, 
                 log::delete
             ],
-        )
-        .mount(
-            "/api/error/", 
-            routes![
-                middleware::apikey::get_invalid_api_key,
-                middleware::apikey::post_invalid_api_key,
-                middleware::apikey::put_invalid_api_key,
-                middleware::apikey::delete_invalid_api_key,
-                middleware::apikey::patch_invalid_api_key,
-                middleware::apikey::head_invalid_api_key,
-                middleware::apikey::options_invalid_api_key
-            ]
         )
 }
