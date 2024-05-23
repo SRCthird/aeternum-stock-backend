@@ -11,7 +11,7 @@ use crate::database::{
     },
 };
 use diesel::{
-    dsl::sql,
+    dsl::{sql, not},
     prelude::*,
     result::{
         DatabaseErrorKind::{ForeignKeyViolation, UniqueViolation},
@@ -74,9 +74,9 @@ pub fn input(inventory: Json<CreateInventory>) -> Result<Json<Inventory>, status
     }
 
     let unique_lots: i64 = dsl::inventory
-        .filter(dsl::lot_number.eq(&inventory.lot_number))
-        .filter(dsl::location.eq(&inventory.location))
         .select(sql::<BigInt>("COUNT(DISTINCT lot_number)"))
+        .filter(not(dsl::lot_number.eq(&inventory.lot_number)))
+        .filter(dsl::location.eq(&inventory.location))
         .get_result(connection)
         .unwrap_or(0);
     if unique_lots >= bay_max_count {
