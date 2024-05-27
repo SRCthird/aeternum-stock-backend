@@ -37,6 +37,7 @@ CREATE DATABASE aeternum_stock;
 Create a `.env` file in the root directory and update the following information with your database credentials. This project is designed to use the .env file from your current working directory first. If one is not found in your cwd it searches the location of the .exe file. In debug that will be `./target/debug`:
 
 ```
+API_KEY=123123 #choose something secure
 DB_CONNECTION=mysql://username:password@localhost/aeternum_stock
 ```
 
