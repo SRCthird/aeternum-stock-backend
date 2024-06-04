@@ -22,7 +22,9 @@ pub fn input(inventorybay: Json<CreateInventoryBay>) -> Result<Json<InventoryBay
 
     match result {
         Ok(_) => {
-            let inserted_inventorybay = table.order(dsl::id.desc()).first(connection).unwrap();
+            let inserted_inventorybay = table
+                .order(dsl::id.desc())
+                .first(connection).unwrap();
             Ok(Json(inserted_inventorybay))
         }
         Err(e) => Err(match e {
@@ -57,9 +59,10 @@ pub fn list() -> Result<Json<Vec<String>>, status::Custom<String>> {
     }
 }
 
-#[get("/?<name>&<warehouse_name>&<max_unique_lots>")]
+#[get("/?<name>&<friendly_name>&<warehouse_name>&<max_unique_lots>")]
 pub fn get(
     name: Option<String>,
+    friendly_name: Option<String>,
     warehouse_name: Option<String>,
     max_unique_lots: Option<i32>,
 ) -> Result<Json<Vec<InventoryBay>>, status::Custom<String>> {
@@ -76,36 +79,26 @@ pub fn get(
         _ => (),
     }
 
-    let query_result: QueryResult<Vec<InventoryBay>> =
-        match (name, warehouse_name, max_unique_lots) {
-            (Some(name), Some(warehouse_name), Some(max_unique_lots)) => dsl::inventorybay
-                .filter(dsl::name.like(format!("{}%", name)))
-                .filter(dsl::warehouse_name.like(format!("{}%", warehouse_name)))
-                .filter(dsl::max_unique_lots.eq(max_unique_lots))
-                .load(connection),
-            (Some(name), Some(warehouse_name), None) => dsl::inventorybay
-                .filter(dsl::name.like(format!("{}%", name)))
-                .filter(dsl::warehouse_name.like(format!("{}%", warehouse_name)))
-                .load(connection),
-            (Some(name), None, Some(max_unique_lots)) => dsl::inventorybay
-                .filter(dsl::name.like(format!("{}%", name)))
-                .filter(dsl::max_unique_lots.eq(max_unique_lots))
-                .load(connection),
-            (None, Some(warehouse_name), Some(max_unique_lots)) => dsl::inventorybay
-                .filter(dsl::warehouse_name.like(format!("{}%", warehouse_name)))
-                .filter(dsl::max_unique_lots.eq(max_unique_lots))
-                .load(connection),
-            (Some(name), None, None) => dsl::inventorybay
-                .filter(dsl::name.like(format!("{}%", name)))
-                .load(connection),
-            (None, Some(warehouse_name), None) => dsl::inventorybay
-                .filter(dsl::warehouse_name.like(format!("{}%", warehouse_name)))
-                .load(connection),
-            (None, None, Some(max_unique_lots)) => dsl::inventorybay
-                .filter(dsl::max_unique_lots.eq(max_unique_lots))
-                .load(connection),
-            (None, None, None) => dsl::inventorybay.load(connection),
-        };
+    
+    let mut query = dsl::inventorybay.into_boxed();
+    
+    if let Some(ref name) = name {
+        query = query.filter(dsl::name.like(format!("{}%", name)));
+    }
+
+    if let Some(ref friendly_name) = friendly_name {
+        query = query.filter(dsl::friendly_name.like(format!("{}%", friendly_name)));
+    }
+
+    if let Some(ref warehouse_name) = warehouse_name {
+        query = query.filter(dsl::warehouse_name.like(format!("{}%", warehouse_name)));
+    }
+
+    if let Some(max_unique_lots) = max_unique_lots {
+        query = query.filter(dsl::max_unique_lots.eq(max_unique_lots));
+    }
+
+    let query_result: QueryResult<Vec<InventoryBay>> = query.load(connection);
 
     match query_result {
         Ok(inventorybays) => Ok(Json(inventorybays)),
