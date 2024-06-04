@@ -30,13 +30,7 @@ fn rocket() -> Rocket<Build> {
         .mount(
             "/api/error/", 
             routes![
-                middleware::apikey::get_invalid_api_key,
-                middleware::apikey::post_invalid_api_key,
-                middleware::apikey::put_invalid_api_key,
-                middleware::apikey::delete_invalid_api_key,
-                middleware::apikey::patch_invalid_api_key,
-                middleware::apikey::head_invalid_api_key,
-                middleware::apikey::options_invalid_api_key
+                middleware::apikey::invalid
             ]
         )
         .mount(
