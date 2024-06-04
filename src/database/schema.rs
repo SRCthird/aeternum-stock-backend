@@ -29,6 +29,8 @@ diesel::table! {
         #[max_length = 191]
         warehouse_name -> Varchar,
         max_unique_lots -> Integer,
+        #[max_length = 191]
+        friendly_name -> Varchar,
     }
 }
 

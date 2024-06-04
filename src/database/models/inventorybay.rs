@@ -8,6 +8,7 @@ pub struct InventoryBay {
     pub name: String,
     pub warehouse_name: String,
     pub max_unique_lots: i32,
+    pub friendly_name: String,
 }
 
 #[derive(Insertable, Deserialize)]
@@ -15,6 +16,7 @@ pub struct InventoryBay {
 #[diesel(table_name = crate::database::schema::inventorybay)]
 pub struct CreateInventoryBay {
     pub name: String,
+    pub friendly_name: String,
     pub warehouse_name: String,
     pub max_unique_lots: i32,
 }
@@ -24,6 +26,7 @@ pub struct CreateInventoryBay {
 #[diesel(table_name = crate::database::schema::inventorybay)]
 pub struct UpdateInventoryBay {
     pub name: Option<String>,
+    pub friendly_name: Option<String>,
     pub warehouse_name: Option<String>,
     pub max_unique_lots: Option<i32>,
 }
