@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use rocket::serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
+use derivative::Derivative;
 
 #[derive(Debug, Serialize, Queryable)]
 #[serde(crate = "rocket::serde")]
@@ -30,14 +31,16 @@ pub struct CreateInventory {
     pub comments: String,
 }
 
-#[derive(Deserialize, AsChangeset, Debug, Clone)]
+#[derive(Deserialize, AsChangeset, Debug, Clone, Derivative)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::database::schema::inventory)]
+#[derivative(Default)]
 pub struct UpdateInventory {
     pub lot_number: Option<String>,
     pub location: Option<String>,
     pub quantity: Option<i32>,
     pub updated_by: Option<String>,
+    #[derivative(Default(value = "Some(chrono::Utc::now().naive_utc())"))]
     pub updated_at: Option<NaiveDateTime>,
     pub from_location: Option<String>,
     pub comments: Option<String>,
