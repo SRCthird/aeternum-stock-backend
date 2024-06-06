@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
-use rocket::{config::{Ident, LogLevel}, Build, Rocket};
+use rocket::{Build, Rocket};
 
 mod controller;
 mod database;
@@ -12,14 +12,6 @@ use controller::{inventory, inventorybay, log, product, productlot, user, wareho
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .configure(rocket::Config {
-            address: "0.0.0.0".parse().unwrap(),
-            port: 5000,
-            ident: Ident::try_new("Aeternum Stock API").unwrap(),
-            log_level: LogLevel::Normal,
-            cli_colors: true,
-            ..Default::default()
-        })
         .register(
             "/",
             catchers![

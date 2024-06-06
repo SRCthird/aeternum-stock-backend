@@ -1,0 +1,10 @@
+[global]
+address = "0.0.0.0"
+port = 5000
+log_level = "normal" 
+ident = "Aeternum Stock API"
+cli_colors = true
+
+[global.tls]
+certs = "ssl/certificate.cer"
+key = "ssl/private.key"
