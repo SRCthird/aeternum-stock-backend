@@ -161,7 +161,6 @@ pub fn update(
         .set(&patch_inventory.clone().into_inner())
         .execute(connection);
 
-    println!("{:?}", patch_inventory.clone().into_inner());
     match update_result {
         Ok(_) => {
             if let Some(from_location) = &patch_inventory.from_location {
@@ -175,7 +174,7 @@ pub fn update(
                         user: patch_inventory
                             .updated_by
                             .clone()
-                            .unwrap_or(found_inventory.updated_by.unwrap()),
+                            .unwrap_or(found_inventory.created_by),
                         lot_number: patch_inventory
                             .lot_number
                             .clone()
