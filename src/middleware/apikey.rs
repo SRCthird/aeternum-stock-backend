@@ -15,6 +15,11 @@ impl Fairing for ApiKeyFairing {
     }
 
     async fn on_request(&self, request: &mut Request<'_>, _: &mut Data<'_>) {
+        if request.method() == rocket::http::Method::Options {
+            let uri = Origin::try_from("/api/error/cors").expect("valid URI");
+            request.set_uri(uri);
+            return;
+        }
         dotenv().ok();
         let api_key = api_key();
         let recieved = request.headers().get_one("x-api-key");

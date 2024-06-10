@@ -9,6 +9,7 @@ mod middleware;
 mod catcher;
 use controller::{inventory, inventorybay, log, product, productlot, user, warehouse};
 
+
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
@@ -18,11 +19,13 @@ fn rocket() -> Rocket<Build> {
                 catcher::not_found
             ]
         )
+        .attach(middleware::cors::cors().to_cors().unwrap())
         .attach(middleware::apikey::ApiKeyFairing)
         .mount(
             "/api/error/", 
             routes![
-                middleware::apikey::invalid
+                middleware::apikey::invalid,
+                middleware::cors::good
             ]
         )
         .mount(
