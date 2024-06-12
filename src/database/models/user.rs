@@ -24,7 +24,7 @@ pub struct User {
 pub struct CreateUser {
     pub email: String,
     pub password: String,
-    pub role: String,
+    pub role: Option<String>,
     pub position: Option<String>,
     pub first_name: Option<String>,
     pub last_name: Option<String>,

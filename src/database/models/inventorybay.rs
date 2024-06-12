@@ -16,7 +16,7 @@ pub struct InventoryBay {
 #[diesel(table_name = crate::database::schema::inventorybay)]
 pub struct CreateInventoryBay {
     pub name: String,
-    pub friendly_name: String,
+    pub friendly_name: Option<String>,
     pub warehouse_name: String,
     pub max_unique_lots: i32,
 }
