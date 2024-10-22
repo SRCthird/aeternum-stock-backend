@@ -6,14 +6,16 @@ use crate::database::{
         log::CreateLog,
         productlot::ProductLot,
     },
-    schema::{inventory::dsl, log, productlot},
+    schema::{inventory::dsl, inventorybay, log, productlot},
 };
 use diesel::{
+    dsl::{not, sql},
     prelude::*,
     result::{
         DatabaseErrorKind::{ForeignKeyViolation, UniqueViolation},
         Error::{DatabaseError, NotFound},
     },
+    sql_types::BigInt,
 };
 use rocket::{http::Status, response::status, serde::json::Json};
 
@@ -71,6 +73,37 @@ pub fn update(
         }
     }
 
+    if let Some(location) = &patch_inventory.location {
+        println!("{:?}", &patch_inventory);
+        let bay_max_count = inventorybay::dsl::inventorybay
+            .select(sql::<BigInt>("SUM(max_unique_lots)"))
+            .filter(inventorybay::dsl::name.eq(location))
+            .get_result(connection)
+            .unwrap_or(0);
+        println!("{:?}", &bay_max_count);
+
+        if bay_max_count == 0 {
+            return Err(status::Custom(
+                    Status::PayloadTooLarge,
+                    "Location not found in system, or not a storable location".to_string(),
+            ));
+        }
+
+        let unique_lots: i64 = dsl::inventory
+            .select(sql::<BigInt>("COUNT(DISTINCT lot_number)"))
+            .filter(not(dsl::lot_number.eq(&found_inventory.lot_number)))
+            .filter(dsl::location.eq(&location))
+            .get_result(connection)
+            .unwrap_or(0);
+        println!("{:?}", &unique_lots);
+        if unique_lots >= bay_max_count {
+            return Err(status::Custom(
+                    Status::Conflict,
+                    "Inventory already at capacity".to_string(),
+            ));
+        }
+    }
+
     if let Some(quantity) = patch_inventory.quantity {
         if quantity > lot.quantity {
             return Err(status::Custom(
@@ -79,26 +112,6 @@ pub fn update(
             ));
         }
     }
-
-    /*
-    match &patch_inventory.location {
-        Some(location) => {
-            dsl::inventory
-                .filter(dsl::location.eq(location))
-                .first::<Inventory>(connection)
-                .map_err(|e| match e {
-                    NotFound => status::Custom(
-                        Status::NotFound,
-                        "Inventory not found in this system".to_string(),
-                    ),
-                    _ => status::Custom(
-                        Status::InternalServerError,
-                        "Error loading inventory".to_string(),
-                    ),
-                })?;
-        }
-        None => {}
-    }*/
 
     let updated_inventory = CreateInventory {
         lot_number: patch_inventory
@@ -136,17 +149,19 @@ pub fn update(
     let merged = merge_lot(updated_inventory.clone(), Some(id));
 
     match merged {
-        Ok(lot) => return {
-            diesel::delete(dsl::inventory.filter(dsl::id.eq(id)))
-                .execute(connection)
-                .map_err(|_| {
-                    status::Custom(
-                        Status::InternalServerError,
-                        "Error deleting inventory".to_string(),
-                    )
-                })?;
-            Ok(Json(lot))
-        },
+        Ok(lot) => {
+            return {
+                diesel::delete(dsl::inventory.filter(dsl::id.eq(id)))
+                    .execute(connection)
+                    .map_err(|_| {
+                        status::Custom(
+                            Status::InternalServerError,
+                            "Error deleting inventory".to_string(),
+                        )
+                    })?;
+                Ok(Json(lot))
+            }
+        }
         Err(e) => {
             if e.0 != Status::NotFound {
                 return Err(status::Custom(
