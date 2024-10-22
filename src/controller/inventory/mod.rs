@@ -2,6 +2,7 @@ mod _input;
 pub use _input::input;
 mod _get;
 pub use _get::get;
+pub use _get::get_count;
 mod _get_one;
 pub use _get_one::get_one;
 mod _update;
