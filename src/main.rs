@@ -14,7 +14,7 @@ use controller::{inventory, inventorybay, log, product, productlot, user, wareho
 fn rocket() -> Rocket<Build> {
     rocket::build()
         .register(
-            "/",
+            "/inventory/",
             catchers![
                 catcher::not_found
             ]
@@ -22,14 +22,14 @@ fn rocket() -> Rocket<Build> {
         .attach(middleware::cors::cors().to_cors().unwrap())
         .attach(middleware::apikey::ApiKeyFairing)
         .mount(
-            "/api/error/", 
+            "/inventory/api/error/", 
             routes![
                 middleware::apikey::invalid,
                 middleware::cors::good
             ]
         )
         .mount(
-            "/api/user/",
+            "/inventory/api/user/",
             routes![
                 user::input,
                 user::get,
@@ -39,7 +39,7 @@ fn rocket() -> Rocket<Build> {
             ],
         )
         .mount(
-            "/api/warehouse/",
+            "/inventory/api/warehouse/",
             routes![
                 warehouse::input,
                 warehouse::list,
@@ -50,7 +50,7 @@ fn rocket() -> Rocket<Build> {
             ],
         )
         .mount(
-            "/api/inventory-bay/",
+            "/inventory/api/inventory-bay/",
             routes![
                 inventorybay::input,
                 inventorybay::list,
@@ -61,17 +61,18 @@ fn rocket() -> Rocket<Build> {
             ],
         )
         .mount(
-            "/api/inventory/",
+            "/inventory/api/inventory/",
             routes![
                 inventory::input,
                 inventory::get,
+                inventory::get_count,
                 inventory::get_one,
                 inventory::update,
                 inventory::delete
             ],
         )
         .mount(
-            "/api/product/",
+            "/inventory/api/product/",
             routes![
                 product::input,
                 product::list,
@@ -82,7 +83,7 @@ fn rocket() -> Rocket<Build> {
             ],
         )
         .mount(
-            "/api/product-lot/",
+            "/inventory/api/product-lot/",
             routes![
                 productlot::input,
                 productlot::get,
@@ -93,7 +94,7 @@ fn rocket() -> Rocket<Build> {
             ],
         )
         .mount(
-            "/api/log/",
+            "/inventory/api/log/",
             routes![
                 log::input, 
                 log::get, 
